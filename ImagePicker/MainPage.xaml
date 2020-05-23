@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:d="http://xamarin.com/schemas/2014/forms/design"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="ImagePicker.MainPage" BackgroundColor="White" >
+        <!-- Place new controls here -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"></RowDefinition>
+            </Grid.RowDefinitions>
+
+            <!-- body content -->
+            <Grid x:Name="bodyContent" Grid.Row="0" VerticalOptions="Center" HorizontalOptions="Center">
+                <Frame CornerRadius="50" HasShadow="True" WidthRequest="100" HeightRequest="100" BorderColor="DarkGray" Padding="0" IsClippedToBounds="True">
+                    <Image x:Name="profilePicture" Source="default5.png" Aspect="AspectFill"></Image>
+                </Frame>
+                <Frame VerticalOptions="EndAndExpand" HorizontalOptions="EndAndExpand" WidthRequest="20" HeightRequest="20" CornerRadius="5" BorderColor="DarkGray" HasShadow="False" Padding="0" Margin="0,0,0,10" IsClippedToBounds="True">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="TapGestureRecognizer_Tapped"></TapGestureRecognizer>
+                    </Frame.GestureRecognizers>
+                    <Image Source="settings.png" Aspect="AspectFill"></Image>
+                </Frame>
+            </Grid>
+
+            <!-- Image picker-->
+            <StackLayout Grid.Row="0" IsVisible="false" x:Name="imageselector" VerticalOptions="EndAndExpand" HorizontalOptions="FillAndExpand" >
+                <Frame VerticalOptions="End" HeightRequest="300" Padding="0" Margin="0" HasShadow="True" TranslationY="100" x:Name="imageselectorFrame" BackgroundColor="White" CornerRadius="10">
+                    <!-- message-->
+                    <StackLayout>
+                        <StackLayout Orientation="Horizontal" Padding="20">
+                            <Label Text="Your picture," TextColor="#CC205E" FontAttributes="Bold"></Label>
+                            <Label Text="XLife" FontAttributes="Bold"></Label>
+                        </StackLayout>
+                        
+                        <!-- collectio view to display images-->
+                        <CollectionView ItemsLayout="HorizontalList" x:Name="imagesCollectionView" ItemsSource="{Binding MediaAssets}" HeightRequest="110" HorizontalScrollBarVisibility="Never">
+                            
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackLayout Orientation="Horizontal">
+                                        <StackLayout.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="imageTapped" CommandParameter="{Binding .}"></TapGestureRecognizer>
+                                        </StackLayout.GestureRecognizers>
+                                        
+                                        <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="100"></RowDefinition>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"></ColumnDefinition>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Frame Grid.Row="0" Grid.Column="0" Padding="0" Margin="20,0,0,0" CornerRadius="10" WidthRequest="100" HeightRequest="500" HorizontalOptions="Fill" VerticalOptions="Fill" HasShadow="False" BorderColor="Black" IsClippedToBounds="True">
+                                            <Image Source="{Binding PreviewPath}"  Aspect="AspectFill"></Image>
+                                        </Frame>
+                                        <Frame Grid.Row="0" x:Name="{Binding Id}" Grid.Column="0" Padding="0" Margin="0,5,5,0" VerticalOptions="Start" HorizontalOptions="End" BackgroundColor="Transparent" BorderColor="Beige" CornerRadius="10" WidthRequest="20" HeightRequest="20" HasShadow="False" IsVisible="{Binding IsSelectable}"></Frame>
+                                    </Grid>
+                                    </StackLayout>
+                                    
+                                    
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- skip and next button-->
+                        <StackLayout Orientation="Horizontal" HorizontalOptions="Center">
+                            <Frame x:Name="imageSkip" Padding="10" CornerRadius="7" WidthRequest="100" BackgroundColor="Gray" HasShadow="False" IsVisible="true">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="imageSkipTapped"></TapGestureRecognizer>
+                                </Frame.GestureRecognizers>
+                                <Label Text="Skip this" HorizontalOptions="Center" VerticalOptions="Center" TextColor="White" FontAttributes="Bold"></Label>
+                            </Frame>
+                            <Frame x:Name="imageNext" Padding="10" CornerRadius="7" WidthRequest="100" TranslationX="100" IsVisible="true"  BackgroundColor="#CC205E" HasShadow="False">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="imageNextTapped"></TapGestureRecognizer>
+                                </Frame.GestureRecognizers>
+                                <Label Text="Next" HorizontalOptions="Center" VerticalOptions="Center" TextColor="White" FontAttributes="Bold"></Label>
+                            </Frame>
+                        </StackLayout>
+                    </StackLayout>
+                </Frame>
+            </StackLayout>
+            </Grid>
+    
+</ContentPage>
