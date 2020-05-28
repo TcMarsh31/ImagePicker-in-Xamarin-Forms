@@ -46,11 +46,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <MtouchArch>ARM64</MtouchArch>
-    <CodesignKey>iPhone Developer</CodesignKey>
+    <CodesignKey>Apple Development: tharsan.3112@gmail.com (UK74H3289F)</CodesignKey>
     <MtouchDebug>true</MtouchDebug>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     <MtouchLink>None</MtouchLink>
     <MtouchInterpreter>-all</MtouchInterpreter>
+    <CodesignProvision>iOS Team Provisioning Profile: com.xamarinlife.ImagePicker</CodesignProvision>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|iPhone' ">
     <DebugType>none</DebugType>
@@ -135,11 +136,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <BundleResource Include="Resources\default.jpg" />
     <BundleResource Include="Resources\settings.png" />
     <BundleResource Include="Resources\Slice 2.png" />
-    <BundleResource Include="Resources\group.png" />
     <BundleResource Include="Resources\default5.png" />
+    <BundleResource Include="Resources\group.png" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DependencyServiceImplementation\" />

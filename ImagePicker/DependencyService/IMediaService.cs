@@ -12,5 +12,6 @@ namespace ImagePicker.DependencyService
         bool IsLoading { get; }
         Task<IList<MediaAssest>> RetrieveMediaAssetsAsync(CancellationToken? token = null);
         Task<string> StoreProfileImage(string path);
+        Task<string> GetImageWithCamera();
     }
 }

@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Acr.UserDialogs;
 using Android;
+using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.Database;
 using Android.Graphics;
@@ -15,7 +17,9 @@ using Android.Support.V4.App;
 using ImagePicker.DependencyService;
 using ImagePicker.Droid.DependencyServiceImplementation;
 using ImagePicker.Model;
+using Java.IO;
 using Xamarin.Forms;
+using static Android.Provider.MediaStore;
 using static ImagePicker.Model.MediaAssest;
 
 [assembly: Dependency(typeof(MediaServiceImplementation))]
@@ -30,7 +34,11 @@ namespace ImagePicker.Droid.DependencyServiceImplementation
 
         static TaskCompletionSource<bool> mediaPermissionTcs;
 
+        static TaskCompletionSource<string> cameraImagePath;
+
         public const int RequestMedia = 1354;
+
+        public const int RequestCamera = 1355;
 
         public event EventHandler<MediaEventArgs> OnMediaAssetLoaded;
 
@@ -73,6 +81,20 @@ namespace ImagePicker.Droid.DependencyServiceImplementation
                     mediaPermissionTcs.TrySetResult(false);
                 }
 
+            }
+            if(requestCode == RequestCamera)
+            {
+                // We have requested multiple permissions for Camera, so all of them need to be
+                // checked.
+                if (PermissionUtil.VerifyPermissions(grantResults))
+                {
+                    // All required permissions have been granted, display Media fragment.
+                    mediaPermissionTcs.TrySetResult(true);
+                }
+                else
+                {
+                    mediaPermissionTcs.TrySetResult(false);
+                }
             }
         }
 
@@ -250,6 +272,122 @@ namespace ImagePicker.Droid.DependencyServiceImplementation
                 System.Console.WriteLine(e.ToString());
             }
             return filePath;
+        }
+
+        public async Task<string> GetImageWithCamera()
+        {
+            cameraImagePath = new TaskCompletionSource<string>();
+            if (MainActivity.FormsActivity.PackageManager.HasSystemFeature(PackageManager.FeatureCamera))
+            {
+                //camera is available in system 
+                var hasPermission = await RequestCameraPermissionAsync();
+                if (hasPermission)
+
+                {
+                    Intent intent = new Intent(MediaStore.ActionImageCapture);
+                    MainActivity.FormsActivity.StartActivityForResult(intent, RequestCamera);
+
+                }
+            }
+            return await cameraImagePath.Task;
+        }
+
+
+        async void RequestCameraPermissions()
+        {
+            if (ActivityCompat.ShouldShowRequestPermissionRationale(MainActivity.FormsActivity, Manifest.Permission.Camera))
+            {
+
+                // Provide an additional rationale to the user if the permission was not granted
+                // and the user would benefit from additional context for the use of the permission.
+                // For example, if the request has been denied previously.
+
+                await UserDialogs.Instance.AlertAsync("Camera Permission", "This action requires Camera permission", "Ok");
+            }
+            else
+            {
+                // Media permissions have not been granted yet. Request them directly.
+                ActivityCompat.RequestPermissions(MainActivity.FormsActivity, new string[] { Manifest.Permission.Camera }, RequestCamera);
+            }
+        }
+
+        public async Task<bool> RequestCameraPermissionAsync()
+        {
+            mediaPermissionTcs = new TaskCompletionSource<bool>();
+            // Verify that all required Camera permissions have been granted.
+            if (Android.Support.V4.Content.ContextCompat.CheckSelfPermission(MainActivity.FormsActivity, Manifest.Permission.Camera) != (int)Permission.Granted)
+            {
+                // Camera permissions have not been granted.
+                RequestCameraPermissions();
+            }
+            else
+            {
+                // Camera permissions have been granted. 
+                mediaPermissionTcs.TrySetResult(true);
+            }
+
+            return await mediaPermissionTcs.Task;
+        }
+
+        public static void OnActivityResult(int requestCode, Result resultCode, Intent data)
+        {
+           
+            switch (requestCode)
+            {
+                case RequestCamera:
+                    if (resultCode == Result.Ok)
+                    {
+                        var selectedImage = data.Data;
+                        Bitmap photo = (Bitmap)data.Extras.Get("data");
+                        // CALL THIS METHOD TO GET THE URI FROM THE BITMAP
+                        Android.Net.Uri tempUri = getImageUri(MainActivity.FormsContext, photo);
+
+                        // CALL THIS METHOD TO GET THE ACTUAL PATH
+                        //Java.IO.File finalFile = new Java.IO.File(getRealPathFromURI(tempUri));
+                        string filePathofCameraImage = getRealPathFromURI(tempUri);
+                        cameraImagePath.TrySetResult(filePathofCameraImage);
+                        //StoreProfileImage(filePathofCameraImage);
+                        //System.out.println(mImageCaptureUri);
+                        //imageview.setImageUri(selectedImage);
+                    }
+                    else
+                    {
+                        cameraImagePath.TrySetResult("");
+                    }
+                    break;
+            }
+        }
+
+        public static Android.Net.Uri getImageUri(Context inContext, Bitmap inImage)
+        {
+            //ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            //inImage.Compress(Bitmap.CompressFormat.Jpeg, 100, bytes);
+
+            using (var stream = new MemoryStream())
+            {
+                inImage.Compress(Bitmap.CompressFormat.Png, 0, stream);
+                //bitmapData = stream.ToArray();
+            }
+
+            String path = Images.Media.InsertImage(inContext.ContentResolver, inImage, "Title", null);
+            return Android.Net.Uri.Parse(path);
+        }
+
+        public static String getRealPathFromURI(Android.Net.Uri uri)
+        {
+            String path = "";
+            if (MainActivity.FormsContext.ContentResolver != null)
+            {
+                var cursor = MainActivity.FormsContext.ContentResolver.Query(uri, null, null, null, null);
+                if (cursor != null)
+                {
+                    cursor.MoveToFirst();
+                    int idx = cursor.GetColumnIndex(MediaStore.Images.ImageColumns.Data);
+                    path = cursor.GetString(idx);
+                    cursor.Close();
+                }
+            }
+            return path;
         }
     }
 }

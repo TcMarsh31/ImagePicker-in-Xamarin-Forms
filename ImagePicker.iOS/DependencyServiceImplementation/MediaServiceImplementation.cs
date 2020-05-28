@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AssetsLibrary;
 using AVFoundation;
 using CoreGraphics;
 using Foundation;
@@ -26,7 +27,7 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
         public bool IsLoading => _isLoading;
 
         public event EventHandler<MediaEventArgs> OnMediaAssetLoaded;
-
+        static TaskCompletionSource<string> cameraImagePath;
         public MediaServiceImplementation()
         {
         }
@@ -45,21 +46,23 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
 
         }
 
+        CancellationToken? CancelToken;
         public async Task<IList<MediaAssest>> RetrieveMediaAssetsAsync(CancellationToken? token = null)
         {
+            CancelToken = token;
             requestStop = false;
 
-            if (!token.HasValue)
-                token = CancellationToken.None;
+            if (!CancelToken.HasValue)
+                CancelToken = CancellationToken.None;
 
             // We create a TaskCompletionSource of decimal
             var taskCompletionSource = new TaskCompletionSource<IList<MediaAssest>>();
 
             // Registering a lambda into the cancellationToken
-            token.Value.Register(() =>
+            CancelToken.Value.Register(() =>
             {
                 requestStop = true;
-                taskCompletionSource.TrySetCanceled();
+                taskCompletionSource.SetCanceled();
             });
 
             _isLoading = true;
@@ -110,6 +113,9 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
 
                     foreach (var result in fetchResults)
                     {
+                        if(CancelToken.Value.IsCancellationRequested){
+                            break;
+                        }
                         var phAsset = (result as PHAsset);
                         var name = PHAssetResource.GetAssetResources(phAsset)?.FirstOrDefault()?.OriginalFilename;
                         var asset = new MediaAssest()
@@ -216,10 +222,20 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
                                 break;
                         }
 
-                        UIApplication.SharedApplication.InvokeOnMainThread(delegate
+                        if (CancelToken.Value.IsCancellationRequested)
                         {
-                            OnMediaAssetLoaded?.Invoke(this, new MediaEventArgs(asset));
-                        });
+                            break;
+                        }
+                        else
+                        {
+                            UIApplication.SharedApplication.InvokeOnMainThread(delegate
+                            {
+
+
+                                OnMediaAssetLoaded?.Invoke(this, new MediaEventArgs(asset));
+
+                            });
+                        }
                         assets.Add(asset);
 
                         if (requestStop)
@@ -248,5 +264,154 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
             
         }
 
+        UIImagePickerController imagePicker;
+       
+        public async Task<string> GetImageWithCamera()
+        {
+            cameraImagePath = new TaskCompletionSource<string>();
+            CancellationToken? token=null;
+
+            requestStop = false;
+
+            if (!token.HasValue)
+                token = CancellationToken.None;
+
+            // We create a TaskCompletionSource of decimal
+            var taskCompletionSource = new TaskCompletionSource<string>();
+
+            // Registering a lambda into the cancellationToken
+            token.Value.Register(() =>
+            {
+                requestStop = true;
+                taskCompletionSource.TrySetCanceled();
+            });
+
+            _isLoading = true;
+
+            var task = GetImageFromCamera();
+
+            // Wait for the first task to finish among the two
+            var completedTask = await Task.WhenAny(task, taskCompletionSource.Task);
+            _isLoading = false;
+
+            return await cameraImagePath.Task;
+        }
+
+        private async Task GetImageFromCamera()
+        {
+            if (await AuthorizeCameraUse())
+            {
+
+                //Create an image picker object
+                imagePicker = new UIImagePickerController { SourceType = UIImagePickerControllerSourceType.Camera };
+
+                //Make sure we can find the top most view controller to launch the camera
+                var window = UIApplication.SharedApplication.KeyWindow;
+                var vc = window.RootViewController;
+                while (vc.PresentedViewController != null)
+                {
+                    vc = vc.PresentedViewController;
+                }
+
+                vc.PresentViewController(imagePicker, true, null);
+                imagePicker.FinishedPickingMedia += Handle_FinishedPickingMedia;
+                imagePicker.Canceled += Handle_Canceled;
+                
+            }
+            else
+            {
+                //permission denied
+            }
+        }
+
+
+        protected void Handle_FinishedPickingMedia(object sender, UIImagePickerMediaPickedEventArgs e)
+        {
+            // determine what was selected, video or image
+            bool isImage = false;
+            switch (e.Info[UIImagePickerController.MediaType].ToString())
+            {
+                case "public.image":
+                    Console.WriteLine("Image selected");
+                    isImage = true;
+                    break;
+                case "public.video":
+                    Console.WriteLine("Video selected");
+                    break;
+            }
+
+            // get common info (shared between images and video)
+            NSUrl referenceURL = e.Info[new NSString("UIImagePickerControllerReferenceUrl")] as NSUrl;
+            if (referenceURL != null)
+                Console.WriteLine("Url:" + referenceURL.ToString());
+
+            // if it was an image, get the other image info
+            if (isImage)
+            {
+                // get the original image
+                UIImage originalImage = e.Info[UIImagePickerController.OriginalImage] as UIImage;
+
+                if (originalImage != null)
+                {
+                    // do something with the image
+                    Console.WriteLine("got the original image");
+
+                    var documentsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string jpgFilename = System.IO.Path.Combine(documentsDirectory, "Photo.jpg");
+                    NSData imgData = originalImage.AsJPEG();
+                    NSError err = null;
+                    if (imgData.Save(jpgFilename, false, out err))
+                    {
+                        Console.WriteLine("saved as " + jpgFilename);
+                        cameraImagePath.TrySetResult(jpgFilename);
+                    }
+                    else
+                    {
+                        Console.WriteLine("NOT saved as" + jpgFilename + " because" + err.LocalizedDescription);
+                        cameraImagePath.TrySetResult("");
+                    }
+                }
+                else
+                { // if it's a video
+                  // get video url
+                    NSUrl mediaURL = e.Info[UIImagePickerController.MediaURL] as NSUrl;
+                    if (mediaURL != null)
+                    {
+                        Console.WriteLine(mediaURL.ToString());
+                    }
+                }
+                
+                imagePicker.DismissViewController(true, null);
+            }
+        }
+
+        void Handle_Canceled(object sender, EventArgs e)
+        {
+            
+         cameraImagePath.TrySetResult("");
+         imagePicker.DismissViewController(true, null);
+         
+        }
+
+        public static async Task<bool> AuthorizeCameraUse()
+        {
+            var authorizationStatus = AVCaptureDevice.GetAuthorizationStatus(AVMediaType.Video);
+
+            if (authorizationStatus != AVAuthorizationStatus.Authorized)
+            {
+                return await AVCaptureDevice.RequestAccessForMediaTypeAsync(AVMediaType.Video);
+            }
+            else
+                return true;
+        }
+
+        class CameraDelegate : UIImagePickerControllerDelegate
+        {
+            public override void FinishedPickingMedia(UIImagePickerController picker, NSDictionary info)
+            {
+                picker.DismissModalViewController(true);
+                var image = info.ValueForKey(new NSString("UIImagePickerControllerOriginalImage")) as UIImage;
+            }
+        }
     }
 }

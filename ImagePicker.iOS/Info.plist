@@ -38,5 +38,9 @@
 	<string>This application need permission to access photos</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This application need permission to access photos</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses camera to take pictures</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses microphone to record</string>
 </dict>
 </plist>

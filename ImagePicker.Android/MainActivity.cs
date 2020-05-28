@@ -8,6 +8,7 @@ using Android.Widget;
 using Android.OS;
 using Xamarin.Forms.PlatformConfiguration.AndroidSpecific;
 using ImagePicker.Droid.DependencyServiceImplementation;
+using Android.Content;
 
 namespace ImagePicker.Droid
 {
@@ -15,10 +16,12 @@ namespace ImagePicker.Droid
     public class MainActivity : global::Xamarin.Forms.Platform.Android.FormsAppCompatActivity
     {
         public static Activity FormsActivity { get; set; }
+        public static Context FormsContext { get; set; }
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
             FormsActivity = this;
+            FormsContext = this;
             TabLayoutResource = Resource.Layout.Tabbar;
             ToolbarResource = Resource.Layout.Toolbar;
 
@@ -34,6 +37,13 @@ namespace ImagePicker.Droid
             Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
             MediaServiceImplementation.OnRequestPermissionsResult(requestCode, permissions, grantResults);
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+
+        protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
+        {
+            MediaServiceImplementation.OnActivityResult(requestCode, resultCode, data);
+            base.OnActivityResult(requestCode, resultCode, data);
+
         }
     }
 }

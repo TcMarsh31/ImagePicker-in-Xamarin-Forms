@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using ImagePicker.DependencyService;
 using ImagePicker.Model;
@@ -18,10 +19,11 @@ namespace ImagePicker
         bool isSelected; // determines is selected of the image
         Frame selectedFrame; //stores the previous selected image frame of collection view
         MediaAssest selectedMediaAsset; //this holds the selected image details
+        IMediaService mediaService;
 
         public MainPage()
         {
-            IMediaService mediaService = Xamarin.Forms.DependencyService.Get<IMediaService>();
+            mediaService = Xamarin.Forms.DependencyService.Get<IMediaService>();
             mainPageViewModel = new MainPageViewModel(mediaService);
             BindingContext = mainPageViewModel;
             InitializeComponent();
@@ -29,6 +31,7 @@ namespace ImagePicker
             ImageSkipOrSelectImageClickEvent();// check preference already image selected if selected load the profile picture or else defult image
 
         }
+        
 
         async void TapGestureRecognizer_Tapped(System.Object sender, System.EventArgs e)
         {
@@ -119,7 +122,19 @@ namespace ImagePicker
             selectedMediaAsset = mediaAssest;
             if (mediaAssest.PreviewPath == "group.png")
             {
-                //TODO : open camera 
+                mainPageViewModel.CancelMediaAssests();
+                var res = await mediaService.GetImageWithCamera();
+                if (res != "")
+                {
+                    bodyContent.Opacity = 1;
+                    bodyContent.InputTransparent = false;
+                    imageselector.IsVisible = false;
+
+                    string path = await Xamarin.Forms.DependencyService.Get<IMediaService>().StoreProfileImage(res); //store the image in app folder
+                    Preferences.Set("ProfileImage", path); //set the path of the image in preferences
+                    ImageSkipOrSelectImageClickEvent();
+
+                }
             }
             else
             {
