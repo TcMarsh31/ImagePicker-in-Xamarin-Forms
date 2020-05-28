@@ -324,7 +324,7 @@ namespace ImagePicker.iOS.DependencyServiceImplementation
             }
         }
 
-
+        //image from camera finished successfully
         protected void Handle_FinishedPickingMedia(object sender, UIImagePickerMediaPickedEventArgs e)
         {
             // determine what was selected, video or image
